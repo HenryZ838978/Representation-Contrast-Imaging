@@ -9,7 +9,29 @@
   <img src="https://img.shields.io/badge/Status-Initial_Discovery-red" />
 </p>
 
-> **TL;DR**: We use [Representation Engineering](https://arxiv.org/abs/2310.01405) control vectors as *contrast agents* to reveal the hidden topological structure of an LLM's representation space. By sweeping each of 5 semantic dimensions from −3.0 to +3.0 and measuring output quality metrics, we produce a "terrain map" that exposes sharp domain boundaries (cliffs), smooth gradients, and asymmetric landscapes — the *sulci and gyri* of the model's learned representation manifold.
+> **👉 [点击查看可视化图解（Visual Explainer）](figures/visual_explainer.html)** — 如果你只有 2 分钟，先看这个。用图讲清楚"表征显影"到底做了什么。
+
+---
+
+### 一句话版
+
+给大语言模型做"脑沟成像"——用 RepEng 控制向量当造影剂，扫出了模型表示空间里的**沟壑、断崖和平原**。
+
+### 一张图版
+
+```
+                    扫描方向 α: -3.0 ──────────────── 0 ──────────────── +3.0
+                    
+  formality         ──────────────────────────────────────────────────────── 平滑 ✓
+  confidence        ──────────────────────────────────────────────────────── 平滑 ✓
+  creativity        ──────────────────────────────────────────────────────── 平滑 ✓
+  emotion_valence   ──────────────────────────────────────█ 断崖! (α=+1.8) 
+  empathy           ████ 断崖! (α=-1.4) ─────────────────────────────────── 
+```
+
+### 一段话版
+
+> We use [Representation Engineering](https://arxiv.org/abs/2310.01405) control vectors as *contrast agents* to reveal the hidden topological structure of an LLM's representation space. By sweeping each of 5 semantic dimensions from −3.0 to +3.0 and measuring output quality metrics, we produce a "terrain map" that exposes sharp domain boundaries (cliffs), smooth gradients, and asymmetric landscapes — the *sulci and gyri* of the model's learned representation manifold.
 
 ---
 

@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>表征显影 — 给大模型做脑沟成像</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #050508;
+    --surface: #0c0c14;
+    --card: #111119;
+    --border: #1a1a28;
+    --text: #e8e8f0;
+    --muted: #6e6e88;
+    --accent: #4fc3f7;
+    --cliff-red: #ef5350;
+    --safe-green: #66bb6a;
+    --warn-amber: #ffa726;
+    --purple: #ab47bc;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans SC', sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(ellipse at 60% 40%, rgba(79,195,247,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 30% 70%, rgba(171,71,188,0.04) 0%, transparent 50%);
+    animation: drift 20s ease-in-out infinite alternate;
+  }
+  @keyframes drift { from { transform: translate(0,0); } to { transform: translate(-3%,2%); } }
+
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin-bottom: 1rem;
+    position: relative;
+    line-height: 1.2;
+  }
+  .hero h1 .glow {
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero .tagline {
+    font-size: 1.2rem;
+    color: var(--muted);
+    max-width: 650px;
+    position: relative;
+    font-weight: 300;
+  }
+  .hero .scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    animation: bounce 2s infinite;
+  }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+
+  /* ─── SECTIONS ─── */
+  .section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 5rem 2rem;
+  }
+  .section-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .section h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    line-height: 1.3;
+  }
+  .section p {
+    font-size: 1rem;
+    color: #bbb;
+    max-width: 700px;
+    margin-bottom: 1.2rem;
+  }
+
+  /* ─── SPHERE DIAGRAM ─── */
+  .sphere-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 3rem 0;
+    perspective: 800px;
+  }
+  .sphere-scene {
+    position: relative;
+    width: 500px;
+    height: 500px;
+  }
+  .sphere-svg { width: 100%; height: 100%; }
+
+  /* ─── ANALOGY CARDS ─── */
+  .analogy-grid {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 0;
+    align-items: center;
+    margin: 3rem 0;
+  }
+  .analogy-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+  }
+  .analogy-card h3 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: var(--accent);
+  }
+  .analogy-card .icon { font-size: 3rem; margin-bottom: 1rem; }
+  .analogy-card table {
+    width: 100%;
+    font-size: 0.85rem;
+    border-collapse: collapse;
+    text-align: left;
+  }
+  .analogy-card td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    color: #aaa;
+  }
+  .analogy-card td:first-child {
+    color: var(--muted);
+    font-size: 0.75rem;
+    width: 35%;
+  }
+  .analogy-equals {
+    text-align: center;
+    font-size: 2rem;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ─── CLIFF DEMO ─── */
+  .cliff-demo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 3rem 0;
+  }
+  @media (max-width: 768px) {
+    .cliff-demo { grid-template-columns: 1fr; }
+    .analogy-grid { grid-template-columns: 1fr; }
+    .analogy-equals { padding: 1rem 0; }
+  }
+  .cliff-card {
+    border-radius: 16px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .cliff-card.before {
+    background: linear-gradient(135deg, #0a2e1a, #0c1a10);
+    border: 1px solid #1a4a2a;
+  }
+  .cliff-card.after {
+    background: linear-gradient(135deg, #2e0a0a, #1a0c0c);
+    border: 1px solid #4a1a1a;
+  }
+  .cliff-card .alpha {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+  .cliff-card.before .alpha { color: var(--safe-green); }
+  .cliff-card.after .alpha { color: var(--cliff-red); }
+  .cliff-card .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+  }
+  .cliff-card.before .label { color: var(--safe-green); }
+  .cliff-card.after .label { color: var(--cliff-red); }
+  .cliff-card .output {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--text);
+  }
+  .cliff-card .delta {
+    position: absolute;
+    top: 1rem; right: 1.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 8px;
+  }
+  .cliff-card.before .delta { background: rgba(102,187,106,0.15); color: var(--safe-green); }
+  .cliff-card.after .delta { background: rgba(239,83,80,0.15); color: var(--cliff-red); }
+
+  .cliff-arrow {
+    text-align: center;
+    margin: 1rem 0;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--cliff-red);
+    font-size: 0.9rem;
+  }
+
+  /* ─── TERRAIN CHART ─── */
+  .terrain-strip {
+    margin: 3rem 0;
+    padding: 2rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+  .terrain-strip h3 {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .terrain-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.8rem;
+    gap: 1rem;
+  }
+  .terrain-label {
+    width: 140px;
+    font-size: 0.8rem;
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .terrain-bar {
+    flex: 1;
+    height: 32px;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    background: #1a1a28;
+  }
+  .terrain-bar .fill {
+    height: 100%;
+    border-radius: 4px;
+    position: relative;
+  }
+  .terrain-bar .cliff-marker {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 3px;
+    background: var(--cliff-red);
+    z-index: 2;
+    box-shadow: 0 0 8px var(--cliff-red);
+  }
+  .terrain-bar .cliff-label {
+    position: absolute;
+    top: -18px;
+    font-size: 0.6rem;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--cliff-red);
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .terrain-tag {
+    width: 80px;
+    font-size: 0.65rem;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .terrain-tag.cliff { background: rgba(239,83,80,0.15); color: var(--cliff-red); }
+  .terrain-tag.rough { background: rgba(255,167,38,0.15); color: var(--warn-amber); }
+  .terrain-tag.smooth { background: rgba(102,187,106,0.15); color: var(--safe-green); }
+
+  /* ─── SONAR ANALOGY ─── */
+  .sonar-viz {
+    display: flex;
+    justify-content: center;
+    margin: 3rem 0;
+  }
+  .sonar-svg { max-width: 700px; width: 100%; }
+
+  /* ─── INSIGHT BOX ─── */
+  .insight {
+    background: linear-gradient(135deg, #0a1628, #0c0c14);
+    border: 1px solid #1a2a4a;
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin: 3rem 0;
+  }
+  .insight h3 { color: var(--accent); margin-bottom: 1rem; font-size: 1.1rem; }
+  .insight p { color: #bbb; font-size: 0.95rem; margin-bottom: 0.8rem; }
+  .insight strong { color: var(--text); }
+  .insight code {
+    background: rgba(79,195,247,0.12);
+    color: var(--accent);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9em;
+  }
+
+  .footer {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ HERO ════════════════ -->
+<div class="hero">
+  <h1><span class="glow">表征显影</span></h1>
+  <h1 style="font-size:clamp(1rem,2.5vw,1.6rem);font-weight:400;color:var(--muted);margin-top:-0.5rem">
+    Representation Contrast Imaging
+  </h1>
+  <p class="tagline" style="margin-top:1.5rem">
+    给大语言模型做"脑沟成像"——<br>
+    用 RepEng 控制向量做造影剂，扫出了模型表示空间里的<strong style="color:var(--text)">沟壑、断崖和平原</strong>。
+  </p>
+  <div class="scroll-hint">↓ 向下滚动看原理</div>
+</div>
+
+<!-- ════════════════ SECTION 1: THE IDEA ════════════════ -->
+<div class="section">
+  <div class="section-num">01 — 核心直觉</div>
+  <h2>模型的"大脑"不是光滑的球面</h2>
+  <p>
+    我们以为大模型内部的表示空间像一个光滑的球——你往任何方向推一点，输出就平滑地变一点。
+    但实际上，它更像一个<strong style="color:var(--text)">布满沟壑的星球</strong>——有平原、有山脊、有悬崖。
+  </p>
+  <p>
+    沿某些方向推，一路畅通；沿另一些方向推，突然掉下悬崖。
+  </p>
+
+  <!-- SPHERE SVG -->
+  <div class="sphere-container">
+    <svg class="sphere-svg" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+      <!-- Background glow -->
+      <defs>
+        <radialGradient id="glow1" cx="50%" cy="45%" r="45%">
+          <stop offset="0%" stop-color="#1a2a4a" />
+          <stop offset="100%" stop-color="#050508" />
+        </radialGradient>
+        <linearGradient id="safeGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#66bb6a" />
+          <stop offset="100%" stop-color="#66bb6a" />
+        </linearGradient>
+        <linearGradient id="cliffGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#66bb6a" />
+          <stop offset="60%" stop-color="#ffa726" />
+          <stop offset="80%" stop-color="#ef5350" />
+          <stop offset="100%" stop-color="#ef5350" />
+        </linearGradient>
+        <filter id="glowFilter">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Sphere body -->
+      <circle cx="250" cy="250" r="180" fill="url(#glow1)" stroke="#2a3a5a" stroke-width="1"/>
+
+      <!-- Surface terrain lines (like topographic contours) -->
+      <ellipse cx="250" cy="250" rx="180" ry="40" fill="none" stroke="#1a2a3a" stroke-width="0.5" transform="rotate(-15 250 250)"/>
+      <ellipse cx="250" cy="250" rx="160" ry="35" fill="none" stroke="#1a2a3a" stroke-width="0.5" transform="rotate(10 250 250)"/>
+      <ellipse cx="250" cy="250" rx="140" ry="30" fill="none" stroke="#1a2a3a" stroke-width="0.5" transform="rotate(-5 250 250)"/>
+      <ellipse cx="250" cy="250" rx="120" ry="25" fill="none" stroke="#1a2a3a" stroke-width="0.5" transform="rotate(20 250 250)"/>
+
+      <!-- SULCUS 1: The emotion cliff (red gash) -->
+      <path d="M 310 140 Q 340 180, 360 220 Q 375 250, 370 290 Q 365 320, 340 350"
+            fill="none" stroke="#ef5350" stroke-width="4" stroke-linecap="round"
+            opacity="0.8" filter="url(#glowFilter)">
+        <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/>
+      </path>
+      <text x="385" y="250" fill="#ef5350" font-size="11" font-family="IBM Plex Mono">emotion 断崖</text>
+
+      <!-- SULCUS 2: The empathy cliff (amber) -->
+      <path d="M 150 310 Q 180 330, 220 340 Q 250 345, 280 335"
+            fill="none" stroke="#ffa726" stroke-width="3" stroke-linecap="round" opacity="0.7">
+        <animate attributeName="opacity" values="0.5;0.9;0.5" dur="4s" repeatCount="indefinite"/>
+      </path>
+      <text x="140" y="365" fill="#ffa726" font-size="11" font-family="IBM Plex Mono">empathy 沟</text>
+
+      <!-- SMOOTH PATH: formality (green, smooth arc) -->
+      <path d="M 130 180 Q 200 150, 250 160 Q 300 170, 350 200"
+            fill="none" stroke="#66bb6a" stroke-width="2.5" stroke-linecap="round"
+            stroke-dasharray="8 4" opacity="0.8"/>
+      <circle cx="130" cy="180" r="4" fill="#66bb6a"/>
+      <circle cx="350" cy="200" r="4" fill="#66bb6a"/>
+      <text x="200" y="135" fill="#66bb6a" font-size="11" font-family="IBM Plex Mono">formality 平滑通过 ✓</text>
+
+      <!-- CLIFF PATH: emotion (red, hits the cliff) -->
+      <path d="M 200 200 Q 250 190, 290 195 Q 320 200, 340 215"
+            fill="none" stroke="#66bb6a" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M 340 215 L 355 230"
+            fill="none" stroke="#ffa726" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="200" cy="200" r="4" fill="#66bb6a"/>
+      <!-- crash marker -->
+      <g transform="translate(360,235)">
+        <circle r="12" fill="rgba(239,83,80,0.3)" stroke="#ef5350" stroke-width="2">
+          <animate attributeName="r" values="10;16;10" dur="1.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="18" y="4" fill="#ef5350" font-size="10" font-family="IBM Plex Mono" font-weight="600">撞崖!</text>
+      </g>
+
+      <!-- Legend -->
+      <g transform="translate(60, 420)">
+        <line x1="0" y1="0" x2="20" y2="0" stroke="#66bb6a" stroke-width="2.5" stroke-dasharray="6 3"/>
+        <text x="28" y="4" fill="#aaa" font-size="10" font-family="Noto Sans SC">平滑维度（formality, confidence）</text>
+      </g>
+      <g transform="translate(60, 440)">
+        <line x1="0" y1="0" x2="14" y2="0" stroke="#66bb6a" stroke-width="2.5"/>
+        <line x1="14" y1="0" x2="20" y2="0" stroke="#ef5350" stroke-width="2.5"/>
+        <text x="28" y="4" fill="#aaa" font-size="10" font-family="Noto Sans SC">断崖维度（emotion → 撞到域边界）</text>
+      </g>
+      <g transform="translate(60, 460)">
+        <line x1="0" y1="0" x2="20" y2="0" stroke="#ef5350" stroke-width="3" opacity="0.8"/>
+        <text x="28" y="4" fill="#aaa" font-size="10" font-family="Noto Sans SC">沟壑 = 预训练数据的域边界</text>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- ════════════════ SECTION 2: CT ANALOGY ════════════════ -->
+<div class="section">
+  <div class="section-num">02 — 原理类比</div>
+  <h2>和 CT 造影完全一样的逻辑</h2>
+  <p>
+    CT 造影：往人体注射造影剂 → 拍 X 光 → 造影剂在不同组织里浓度不同 → 器官边界显现。<br>
+    表征显影：往模型注入控制向量 → 测输出质量 → 不同区域响应不同 → 域边界显现。
+  </p>
+
+  <div class="analogy-grid">
+    <div class="analogy-card">
+      <div class="icon">🏥</div>
+      <h3>CT 造影（医学成像）</h3>
+      <table>
+        <tr><td>造影剂</td><td>碘基造影剂</td></tr>
+        <tr><td>注入剂量</td><td>1mL, 2mL, 5mL...</td></tr>
+        <tr><td>扫描</td><td>X 射线穿过身体</td></tr>
+        <tr><td>测量</td><td>射线衰减/吸收</td></tr>
+        <tr><td>显影结果</td><td>器官边界、血管、肿瘤</td></tr>
+        <tr><td>原理</td><td style="color:var(--accent)">不同组织对造影剂的响应不同</td></tr>
+      </table>
+    </div>
+    <div class="analogy-equals">=</div>
+    <div class="analogy-card">
+      <div class="icon">🧠</div>
+      <h3>表征显影（模型成像）</h3>
+      <table>
+        <tr><td>造影剂</td><td>RepEng 控制向量</td></tr>
+        <tr><td>注入剂量</td><td>α = -3.0 到 +3.0</td></tr>
+        <tr><td>扫描</td><td>向量穿过隐藏层</td></tr>
+        <tr><td>测量</td><td>输出质量衰变曲线</td></tr>
+        <tr><td>显影结果</td><td>域边界、沟壑、平原</td></tr>
+        <tr><td>原理</td><td style="color:var(--accent)">不同区域对控制向量的响应不同</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="insight">
+    <h3>关键洞察</h3>
+    <p>如果模型的表示空间是<strong>光滑</strong>的，那"剂量-响应曲线"应该也是光滑的——加大剂量，输出平滑变化。</p>
+    <p>但我们看到的是：曲线上有<strong>突然的跳变</strong>。这意味着表示空间<strong>不光滑</strong>——那些跳变处就是"沟壑"所在。</p>
+    <p>就像 CT 造影剂在肝脏和胆管之间突然浓度不同——那就是器官边界。</p>
+  </div>
+</div>
+
+<!-- ════════════════ SECTION 3: THE SONAR SWEEP ════════════════ -->
+<div class="section">
+  <div class="section-num">03 — 扫描过程</div>
+  <h2>沿 5 个方向，逐步加大剂量</h2>
+  <p>我们沿 5 个语义维度分别扫描，每个维度从 -3.0 到 +3.0，步长 0.2。在每个点生成 3 段文本，测量 4 项指标。</p>
+
+  <div class="sonar-viz">
+    <svg class="sonar-svg" viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="scanGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#66bb6a"/>
+          <stop offset="50%" stop-color="#ffa726"/>
+          <stop offset="100%" stop-color="#ef5350"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Axis -->
+      <line x1="80" y1="260" x2="650" y2="260" stroke="#333" stroke-width="1"/>
+      <text x="360" y="295" fill="#888" font-size="12" text-anchor="middle" font-family="IBM Plex Mono">控制向量强度 α</text>
+      <text x="80" y="280" fill="#666" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">-3.0</text>
+      <text x="365" y="280" fill="#666" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">0</text>
+      <text x="650" y="280" fill="#666" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">+3.0</text>
+      <text x="30" y="145" fill="#888" font-size="11" text-anchor="middle" font-family="Noto Sans SC" transform="rotate(-90 30 145)">重复率</text>
+
+      <!-- Formality line (smooth, green) -->
+      <polyline points="80,220 130,218 180,215 230,220 280,222 330,220 365,218 400,222 450,225 500,228 550,230 600,228 650,226"
+                fill="none" stroke="#66bb6a" stroke-width="2.5" opacity="0.8"/>
+      <text x="660" y="230" fill="#66bb6a" font-size="10" font-family="IBM Plex Mono">formality</text>
+
+      <!-- Confidence line (smooth, green) -->
+      <polyline points="80,230 130,228 180,226 230,230 280,232 330,228 365,230 400,226 450,234 500,228 550,226 600,228 650,226"
+                fill="none" stroke="#42a5f5" stroke-width="2.5" opacity="0.8"/>
+      <text x="660" y="220" fill="#42a5f5" font-size="10" font-family="IBM Plex Mono">confidence</text>
+
+      <!-- Emotion_valence line (cliff!) -->
+      <polyline points="80,220 130,218 180,216 230,218 280,215 330,220 365,222 400,218 450,225 480,220 510,225 530,228"
+                fill="none" stroke="#ef5350" stroke-width="2.5" opacity="0.8"/>
+      <!-- THE CLIFF -->
+      <polyline points="530,228 540,100 550,95 600,92 650,95"
+                fill="none" stroke="#ef5350" stroke-width="3" opacity="1"/>
+      <text x="660" y="100" fill="#ef5350" font-size="10" font-family="IBM Plex Mono">emotion</text>
+
+      <!-- Cliff annotation -->
+      <line x1="535" y1="100" x2="535" y2="260" stroke="#ef5350" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+      <rect x="500" y="40" width="100" height="42" rx="8" fill="rgba(239,83,80,0.15)" stroke="#ef5350" stroke-width="1"/>
+      <text x="550" y="56" fill="#ef5350" font-size="11" text-anchor="middle" font-weight="600" font-family="Noto Sans SC">断崖!</text>
+      <text x="550" y="72" fill="#ef5350" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">α = +1.8 → +2.0</text>
+
+      <!-- Empathy line (rough, negative cliff) -->
+      <polyline points="80,140 130,145 180,150 230,160 250,170 270,210"
+                fill="none" stroke="#ab47bc" stroke-width="2.5" opacity="0.8"/>
+      <polyline points="270,210 330,225 365,220 400,225 450,228 500,230 550,228 600,226 650,224"
+                fill="none" stroke="#ab47bc" stroke-width="2.5" opacity="0.8"/>
+      <text x="82" y="134" fill="#ab47bc" font-size="10" font-family="IBM Plex Mono">empathy</text>
+
+      <!-- Empathy cliff marker -->
+      <line x1="270" y1="100" x2="270" y2="260" stroke="#ab47bc" stroke-width="1" stroke-dasharray="4 4" opacity="0.4"/>
+      <text x="250" y="95" fill="#ab47bc" font-size="9" font-family="IBM Plex Mono" text-anchor="middle">α = -1.4</text>
+
+      <!-- Baseline zone -->
+      <rect x="340" y="60" width="50" height="195" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <text x="365" y="75" fill="#666" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">baseline</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ════════════════ SECTION 4: THE CLIFF ════════════════ -->
+<div class="section">
+  <div class="section-num">04 — 关键发现</div>
+  <h2>emotion α = +1.8 → +2.0：悬崖</h2>
+  <p>仅仅 0.2 的剂量差异。同一个模型，同一个问题（"写一句鼓励人的话"），从完美到崩溃：</p>
+
+  <div class="cliff-demo">
+    <div class="cliff-card before">
+      <div class="delta">rep = 0.08</div>
+      <div class="alpha">α = +1.8</div>
+      <div class="label">悬崖边缘 — 仍然正常</div>
+      <div class="output">
+        "在人生的旅途中，每一个挑战都是你成长的阶梯，每一次跌倒都是为了跳得更高！请相信，你拥有无比的勇气和力量，只要心怀梦想，脚踏实地，就能创造出属于自己的精彩"
+      </div>
+    </div>
+    <div class="cliff-card after">
+      <div class="delta">rep = 0.36</div>
+      <div class="alpha">α = +2.0 <span style="opacity:0.6">(↑ 仅 0.2)</span></div>
+      <div class="label">坠崖 — 重复崩溃</div>
+      <div class="output">
+        "当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！当然！..."
+      </div>
+    </div>
+  </div>
+
+  <div class="cliff-arrow">Δα = 0.2 → 重复率从 8% 跳到 36% (z = 5.1σ)</div>
+
+  <div class="insight">
+    <h3>为什么不是渐进退化，而是断崖？</h3>
+    <p>
+      因为模型不是"越来越不确定"——而是<strong>自信地跨过了一个域边界</strong>。
+    </p>
+    <p>
+      在 α=+1.2 时，模型的 log-probability <strong>反而上升了</strong>（变得更自信）。
+      然后在 α=+2.0 处坠崖。它不是不知道该说什么——它非常确定自己在"正确地"生成文本——
+      只是这个"正确"属于<strong>另一个域</strong>（营销文案、儿童读物那种充满感叹号的文体）。
+    </p>
+    <p>
+      这就像你开车 GPS 显示前方道路平坦，但实际地面突然断层——因为 GPS 地图（RLHF）没有标注这个悬崖。
+    </p>
+  </div>
+</div>
+
+<!-- ════════════════ SECTION 5: TERRAIN MAP ════════════════ -->
+<div class="section">
+  <div class="section-num">05 — 完整地形图</div>
+  <h2>5 个维度的拓扑分类</h2>
+
+  <div class="terrain-strip">
+    <h3>安全操作范围 — 基于 465 次生成的实测数据</h3>
+
+    <div class="terrain-row">
+      <div class="terrain-label" style="color:#ef5350">emotion_valence</div>
+      <div class="terrain-bar">
+        <div class="fill" style="width:80%;background:linear-gradient(90deg,#1a3a1a 0%,#1a3a1a 60%,#3a2a1a 75%,#3a1a1a 80%);"></div>
+        <div class="cliff-marker" style="left:80%">
+          <div class="cliff-label">+1.8 断崖</div>
+        </div>
+      </div>
+      <div class="terrain-tag cliff">CLIFF</div>
+    </div>
+
+    <div class="terrain-row">
+      <div class="terrain-label" style="color:#ab47bc">empathy</div>
+      <div class="terrain-bar">
+        <div class="fill" style="width:100%;background:linear-gradient(90deg,#3a1a1a 0%,#3a2a1a 20%,#1a3a1a 43%,#1a3a1a 50%,#1a2a1a 80%,#1a2a1a 100%);"></div>
+        <div class="cliff-marker" style="left:27%">
+          <div class="cliff-label">-1.4 断崖</div>
+        </div>
+      </div>
+      <div class="terrain-tag rough">ROUGH</div>
+    </div>
+
+    <div class="terrain-row">
+      <div class="terrain-label" style="color:#ffa726">creativity</div>
+      <div class="terrain-bar">
+        <div class="fill" style="width:100%;background:#1a3a1a;"></div>
+      </div>
+      <div class="terrain-tag smooth">SMOOTH</div>
+    </div>
+
+    <div class="terrain-row">
+      <div class="terrain-label" style="color:#42a5f5">formality</div>
+      <div class="terrain-bar">
+        <div class="fill" style="width:100%;background:#1a3a1a;"></div>
+      </div>
+      <div class="terrain-tag smooth">SMOOTH</div>
+    </div>
+
+    <div class="terrain-row">
+      <div class="terrain-label" style="color:#66bb6a">confidence</div>
+      <div class="terrain-bar">
+        <div class="fill" style="width:100%;background:#1a3a1a;"></div>
+      </div>
+      <div class="terrain-tag smooth">SMOOTH</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ SECTION 6: SO WHAT ════════════════ -->
+<div class="section">
+  <div class="section-num">06 — 这意味着什么</div>
+  <h2>低精度地形测量 → 高精度导航</h2>
+
+  <div class="insight">
+    <h3>已完成</h3>
+    <p>✅ 证实了表示空间的沟壑存在（<code>emotion_valence</code> 断崖，z = 5.1σ）</p>
+    <p>✅ 分类了 5 个维度的拓扑类型（CLIFF / ROUGH / SMOOTH）</p>
+    <p>✅ 发现了"过度自信陷阱"——模型在撞崖前自信度反而上升</p>
+    <p>✅ 发现了不对称地形——正方向有崖的维度，负方向没有；反之亦然</p>
+  </div>
+
+  <div class="insight">
+    <h3>待验证</h3>
+    <p>⬜ 非 thinking 模型：沟壑位置是否相同？（隔离 RLHF 效应）</p>
+    <p>⬜ BF16 vs INT4：量化是否"削薄了桥面"？</p>
+    <p>⬜ 70B 模型：大模型的沟壑是否更浅？（容量 → 桥宽假说）</p>
+    <p>⬜ MoE 架构：专家路由是否制造更多沟壑？</p>
+    <p>⬜ Fisher 信息矩阵：断崖处的曲率是否真的更高？（数学验证）</p>
+    <p>⬜ <strong>导航</strong>：知道了哪里有崖，能否自动绕行？（自适应 RepEng）</p>
+  </div>
+</div>
+
+<div class="footer">
+  <p>
+    <a href="https://github.com/HenryZ838978/Representation-Contrast-Imaging">GitHub Repo</a> ·
+    <a href="https://github.com/HenryZ838978/RepEngvLLM">RepEngvLLM</a> ·
+    Model: <a href="https://huggingface.co/openbmb/MiniCPM4-8B">MiniCPM4.1-8B</a>
+  </p>
+  <p style="margin-top:1rem;color:#555">
+    This is a low-resolution first measurement of an uncharted terrain.<br>
+    The map is rough. But the territory is real.
+  </p>
+</div>
+
+</body>
+</html>
