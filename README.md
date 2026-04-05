@@ -45,6 +45,14 @@
 
 不是渐进退化。是**坠崖**。
 
+## 过度自信陷阱
+
+<p align="center">
+  <img src="figures/overconfidence_trap.svg" alt="Overconfidence Trap" width="100%" />
+</p>
+
+更诡异的是：模型接近断崖时 **logprob（自信度）反而在升高**。它不知道自己即将坠崖。这意味着用困惑度（perplexity）无法预警这种失效——你需要我们的多指标扫描方法才能发现。
+
 ---
 
 > **Revealing Topological Discontinuities in LLM Hidden States via Control Vector Dose-Response Sweeps**
