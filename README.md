@@ -14,37 +14,41 @@
 
 Using [Representation Engineering](https://arxiv.org/abs/2310.01405) control vectors as **contrast agents**, SNI sweeps a model's 5-dimensional personality space (emotion, formality, creativity, confidence, empathy), measures where output quality degrades, and projects the resulting hidden-state geometry into an interactive 3D point cloud — a **nebula** whose shape, color, and density encode the model's structural health.
 
-**Color** = safety. Blue is stable. Red is cliff territory — one more step and the model collapses into repetition loops.  
-**Shape** = architecture. A round nebula means the personality dimensions are well-separated. A compressed streak means they've collapsed into one axis.
+**Color** = safety. Blue is stable. Red is cliff territory — the boundary of the model's safe operating envelope.  
+**Shape** = architecture strategy. A round nebula means capacity is distributed broadly across personality dimensions. A concentrated streak means capacity is focused into a high-throughput primary corridor — more efficient on-axis, with sharper boundaries off-axis.
 
 ---
 
 ## Part I — What This Reveals
 
-### 1. Stable vs. Fragile Architecture
+### 1. Two Strategies: Distributed vs. Concentrated
 
 <p align="center">
-  <img src="figures/sni/sni_qwen3_vs_minicpm.png" width="100%" alt="Qwen3-8B (Stable) vs MiniCPM4.1-8B (Fragile)">
+  <img src="figures/sni/sni_qwen3_vs_minicpm.png" width="100%" alt="Qwen3-8B (Distributed) vs MiniCPM4.1-8B (Concentrated)">
 </p>
 
 |  | **Qwen3-8B** | **MiniCPM4.1-8B** |
 |---|---|---|
-| Shape | Spherical, multi-dimensional | Compressed "galaxy band" |
+| Shape | Spherical, multi-dimensional | Concentrated "galaxy band" |
 | PCA variance distribution | 58.2 + 20.9 + 8.0% | 83.1 + 10.8 + 3.3% |
 | PC1:PC2 ratio | **2.7 : 1** | **7.7 : 1** |
-| Structure | Multi-dimensional · Stable | Compressed · Collapse-prone |
-| Avg danger | 0.042 | 0.019 (low on-axis, high off-axis) |
+| Strategy | Distributed · Multi-axis | Channel-concentrated · High-density |
+| Avg danger | 0.042 | 0.019 (extremely low on-axis) |
 
-**What the nebula tells you**: Qwen3-8B distributes its representation capacity across all personality dimensions roughly equally — you can steer emotion, formality, creativity independently without interference. MiniCPM4.1-8B has squeezed 83% of its personality variance into a single principal component. It's efficient along that axis (hence low average danger), but **any perturbation off the main track triggers collapse**. The bright streak you see is the one safe corridor; the sparse scatter around it is where the model breaks.
+**What the nebula tells you**: These two models represent fundamentally different architectural strategies for allocating representation capacity.
 
-This is exactly what practitioners report: MiniCPM4.1 is capable when used normally but notoriously unstable when pushed. **Now you can see the geometry behind the instability.**
+**Qwen3-8B** distributes capacity broadly across all personality dimensions — you can steer emotion, formality, creativity independently without interference. The nebula is spherical because the representation space spans multiple axes roughly equally. This gives **robustness**: the model tolerates perturbation in any direction.
 
-The side-view angle makes the dimensional collapse especially clear:
+**MiniCPM4.1-8B** concentrates 83% of its personality variance into a single dominant principal component — a high-throughput **primary manifold corridor**. Along this corridor, MiniCPM4.1 is remarkably efficient (average danger 0.019, lower than Qwen3's 0.042). The bright, concentrated galaxy band you see is the region where the model operates at peak density. This is consistent with the [Scaling Law](https://arxiv.org/abs/2404.06395) / Density Law principle: with limited parameters, maximize information density per parameter by concentrating capacity where it matters most. The trade-off is that **the boundaries of this corridor are sharper** — off-axis perturbations exit the high-density region quickly.
+
+Neither strategy is inherently superior — they sit on different points of the **efficiency-robustness Pareto frontier**. SNI makes this trade-off geometrically visible for the first time.
+
+The side-view angle makes the concentration structure especially clear:
 
 <p align="center">
-  <img src="figures/sni/compare_qwen3_minicpm_side.png" width="100%" alt="Side view: 3D sphere vs flat disk">
+  <img src="figures/sni/compare_qwen3_minicpm_side.png" width="100%" alt="Side view: distributed vs concentrated">
   <br>
-  <em>Side view — Qwen3's spherical distribution vs MiniCPM's compressed plane.</em>
+  <em>Side view — Qwen3's distributed sphere vs MiniCPM's concentrated primary corridor.</em>
 </p>
 
 ### 2. The Alignment Effect: Burning Star → Cool Nebula
@@ -150,7 +154,7 @@ Control Vectors (GGUF)     Terrain Data (JSON)
 
 **Q: You're projecting from 5D to 3D. Don't you lose information?**
 
-PCA captures 70–97% of the variance in 3 components (model-dependent). The remaining variance is small — and the fact that different models produce *visually distinct* nebulae that correctly predict known model properties (MiniCPM instability, alignment smoothing, CoT immunity) is strong empirical evidence that the projection preserves the diagnostically relevant structure.
+PCA captures 70–97% of the variance in 3 components (model-dependent). The remaining variance is small — and the fact that different models produce *visually distinct* nebulae that correctly predict known model properties (MiniCPM4.1's channel concentration, alignment smoothing, CoT immunity) is strong empirical evidence that the projection preserves the diagnostically relevant structure.
 
 **Q: The danger colors come from a fitted model, not direct measurement.**
 
@@ -158,7 +162,7 @@ For models with terrain data (dose-response sweeps), the quadratic manifold mode
 
 **Q: Are the structural differences real, or artifacts of PCA?**
 
-The PC1:PC2 ratio is PCA-independent in the sense that it measures actual variance concentration, not an artifact of the projection method. MiniCPM4.1's 7.7:1 ratio means that 83% of the control vector response is genuinely along one axis in the full-dimensional hidden state space. The 3D rendering makes this fact visible, it doesn't create it.
+The PC1:PC2 ratio is PCA-independent in the sense that it measures actual variance concentration, not an artifact of the projection method. MiniCPM4.1's 7.7:1 ratio means that 83% of the control vector response is genuinely concentrated along one axis in the full-dimensional hidden state space — a high-density design consistent with its parameter-efficient architecture. The 3D rendering makes this structural choice visible, it doesn't create it.
 
 ### Validated Across 14 Models
 
@@ -166,7 +170,7 @@ The cross-model study covers the full spectrum of conditions:
 
 | Variable | Models Tested | Key Finding |
 |---|---|---|
-| Architecture | Qwen3-8B, Qwen2.5-7B, Qwen3-14B, MiniCPM4.1-8B | Structure varies dramatically |
+| Architecture | Qwen3-8B, Qwen2.5-7B, Qwen3-14B, MiniCPM4.1-8B | Distinct concentration strategies visible |
 | Alignment | Base vs Instruct | 12× danger reduction, 0 cliffs |
 | Reasoning | Thinking OFF vs ON | Complete cliff immunity |
 | Quantization | BF16 vs AWQ-Int4 | Nearly identical topology |
@@ -182,7 +186,7 @@ Total: **13 experiments, 6,045 generations, 92 cliffs detected.**
 
 ### Model Comparison at a Glance
 
-Instead of running benchmarks that compress a model's behavior into a single number, SNI gives you a **holistic structural portrait**. Two models with identical perplexity scores can have radically different nebula shapes — one spherical (robust), one compressed (fragile). The nebula tells you things that benchmarks miss.
+Instead of running benchmarks that compress a model's behavior into a single number, SNI gives you a **holistic structural portrait**. Two models with identical perplexity scores can have radically different nebula shapes — one distributed (broad robustness), one concentrated (high-density corridor). The nebula reveals architectural strategy choices that benchmarks cannot capture.
 
 ### Training Stage Diagnostics
 

@@ -272,14 +272,14 @@ def generate_pointcloud(tag, n_points=50000):
 
     # Structural assessment
     if pc1_ratio > 5:
-        structure = "Compressed · Collapse-prone"
-        health = "fragile"
+        structure = "Channel-concentrated · High-density"
+        health = "concentrated"
     elif pc1_ratio > 3:
         structure = "Moderately concentrated"
         health = "caution"
     else:
-        structure = "Multi-dimensional · Stable"
-        health = "healthy"
+        structure = "Multi-dimensional · Distributed"
+        health = "distributed"
 
     n_cliffs = sum(1 for m in markers if m["cliff"])
     avg_rep = np.mean([c["rep"] for c in cloud])
@@ -588,14 +588,14 @@ def build_analysis_rows(meta):
     pc_ratio = meta["pc1_ratio"]
 
     if pc_ratio > 5:
-        rows.append(f'<div class="analysis-row">PC1 dominates at <span class="hl">{ve[0]*100:.1f}%</span> — representation space is highly compressed along one axis</div>')
-        rows.append(f'<div class="analysis-row">PC1:PC2 = <span class="hl">{pc_ratio:.1f}:1</span> — personality dimensions are nearly collinear → <span style="color:var(--danger)">fragile</span></div>')
+        rows.append(f'<div class="analysis-row">PC1 concentrates <span class="hl">{ve[0]*100:.1f}%</span> — high-density primary manifold corridor</div>')
+        rows.append(f'<div class="analysis-row">PC1:PC2 = <span class="hl">{pc_ratio:.1f}:1</span> — channel-concentrated architecture → <span style="color:var(--accent)">high density</span></div>')
     elif pc_ratio > 3:
-        rows.append(f'<div class="analysis-row">PC1 at <span class="hl">{ve[0]*100:.1f}%</span> with moderate concentration. Space is somewhat flattened.</div>')
-        rows.append(f'<div class="analysis-row">PC1:PC2 = <span class="hl">{pc_ratio:.1f}:1</span> — moderate risk of dimensional interference</div>')
+        rows.append(f'<div class="analysis-row">PC1 at <span class="hl">{ve[0]*100:.1f}%</span> with moderate concentration.</div>')
+        rows.append(f'<div class="analysis-row">PC1:PC2 = <span class="hl">{pc_ratio:.1f}:1</span> — moderately concentrated representation</div>')
     else:
         rows.append(f'<div class="analysis-row">Balanced distribution: PC1 <span class="hl">{ve[0]*100:.1f}%</span> · PC2 <span class="hl">{ve[1]*100:.1f}%</span> · PC3 <span class="hl">{ve[2]*100:.1f}%</span></div>')
-        rows.append(f'<div class="analysis-row">PC1:PC2 = <span class="hl">{pc_ratio:.1f}:1</span> — dimensions are well-separated → <span style="color:var(--safe)">stable</span></div>')
+        rows.append(f'<div class="analysis-row">PC1:PC2 = <span class="hl">{pc_ratio:.1f}:1</span> — distributed multi-dimensional → <span style="color:var(--safe)">broad coverage</span></div>')
 
     rows.append(f'<div class="analysis-row">Total 3D capture: <span class="hl">{total*100:.1f}%</span> of representation variance</div>')
 
@@ -633,7 +633,7 @@ def build_single_html(tag, compact, metadata):
     ve = metadata["variance_explained"]
     pca_detail = " + ".join(f"{v*100:.1f}" for v in ve)
 
-    health_class = {"healthy": "stat-safe", "caution": "stat-warn", "fragile": "stat-danger"}.get(metadata["health"], "stat-val")
+    health_class = {"distributed": "stat-safe", "caution": "stat-warn", "concentrated": "stat-val"}.get(metadata["health"], "stat-val")
     cliff_class = "stat-danger" if metadata["n_cliffs"] > 0 else "stat-safe"
 
     analysis = build_analysis_rows(metadata)
@@ -771,7 +771,7 @@ def build_comparison(t1, t2):
     inline1 = json.dumps(d1, separators=(",", ":"))
     inline2 = json.dumps(d2, separators=(",", ":"))
 
-    health_class = lambda h: {"healthy":"healthy","caution":"caution","fragile":"fragile"}.get(h,"")
+    health_class = lambda h: {"distributed":"distributed","caution":"caution","concentrated":"concentrated"}.get(h,"")
 
     html = f'''<!DOCTYPE html>
 <html lang="en"><head>
@@ -795,7 +795,7 @@ body {{ background:var(--bg);color:var(--fg);font-family:'Instrument Sans',sans-
 .model-sub {{ font-family:'JetBrains Mono',monospace;font-size:11px;color:#667;margin-top:4px; }}
 .stat-row {{ font-size:11px;color:#889;margin-top:5px;font-family:'JetBrains Mono',monospace; }}
 .stat-row .v {{ color:var(--accent);font-weight:700; }}
-.healthy {{ color:#4d8; }} .caution {{ color:#fd8; }} .fragile {{ color:#f84; }}
+.distributed {{ color:#4d8; }} .caution {{ color:#fd8; }} .concentrated {{ color:#4df; }}
 .center-title {{
   position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:30;text-align:center;pointer-events:none;
 }}
